@@ -24,9 +24,9 @@ footer{text-align:center;color:#777d87;font-size:11px;padding:30px 15px}input{di
 <section class="intro"><div class="eyebrow">A quieter way to read</div><h1>Your digital bookshelf.</h1><p><em>The 48 Laws of Power</em> — ready on your bookshelf. Open the book and turn the pages.</p></section>
 <section class="shelf">
 <div class="upload" id="drop">
-<div style="font-size:34px">▤</div><h2>Bring a book to life</h2><p>Choose a PDF from your phone or computer to open it in the reader.</p>
-<button class="btn" id="choose">Choose PDF</button><input id="file" type="file" accept="application/pdf,.pdf">
-<div class="hint">PDF files · Processed locally in your browser</div>
+<div style="font-size:34px">▤</div><h2 id="loadTitle">Opening your book…</h2>
+<p id="loadMessage">Loading <em>The 48 Laws of Power</em> from this library.</p>
+<div class="hint">Your book is ready to read.</div>
 </div>
 <div id="reader">
 <div class="toolbar"><button id="prev">← Previous</button><span id="pageInfo">Page 0 / 0</span><button id="next">Next →</button><button id="zoomOut">−</button><button id="zoomIn">＋</button><button id="close">Close book</button></div>
@@ -41,32 +41,38 @@ footer{text-align:center;color:#777d87;font-size:11px;padding:30px 15px}input{di
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const reader=document.getElementById('reader'),drop=document.getElementById('drop'),bookEl=document.getElementById('book'),info=document.getElementById('pageInfo');
 let flip=null,zoom=1,pdfDoc=null;
-document.getElementById('choose').onclick=()=>fileInput.click();
-document.getElementById('drop').addEventListener('dragover',e=>{e.preventDefault();drop.style.borderColor='#d7b879'});
-document.getElementById('drop').addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type==='application/pdf')loadPDF(f)});
-fileInput.onchange=()=>{if(fileInput.files[0])loadPDF(fileInput.files[0])};
-async function loadPDF(file){
-try{
-if(flip){flip.destroy();flip=null}bookEl.innerHTML='';drop.style.display='none';reader.style.display='block';info.textContent='Preparing pages…';
-const response=await fetch('./book.pdf');if(!response.ok)throw new Error('Could not fetch book.pdf: '+response.status);\npdfDoc=await pdfjsLib.getDocument({data:await response.arrayBuffer()}).promise;
-const pages=[];
-for(let n=1;n<=pdfDoc.numPages;n++){
-const page=await pdfDoc.getPage(n),vp=page.getViewport({scale:1.35});
-const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');canvas.width=vp.width;canvas.height=vp.height;
-await page.render({canvasContext:ctx,viewport:vp}).promise;
-const wrap=document.createElement('div');wrap.className='page';wrap.appendChild(canvas);pages.push(wrap);
-}
-pages.forEach(p=>bookEl.appendChild(p));
-const w=Math.min(440,window.innerWidth*.42),h=w*1.42;
-flip=new St.PageFlip(bookEl,{width:w,height:h,size:'stretch',minWidth:260,maxWidth:600,minHeight:360,maxHeight:850,showCover:true,drawShadow:true,maxShadowOpacity:.35,flippingTime:750,usePortrait:true});
-flip.loadFromHTML(pages);flip.on('flip',updateInfo);updateInfo();
-}catch(e){document.getElementById('loadTitle').textContent='Book could not be loaded';document.getElementById('loadMessage').textContent='Please check that book.pdf exists in the repository and try refreshing.';console.error(e)}
+async function loadPDF(){
+ try{
+  document.getElementById('loadTitle').textContent='Opening your book…';
+  const response=await fetch('./book.pdf');
+  if(!response.ok) throw new Error('PDF request failed: '+response.status);
+  const bytes=await response.arrayBuffer();
+  pdfDoc=await pdfjsLib.getDocument({data:bytes}).promise;
+  drop.style.display='none';reader.style.display='block';info.textContent='Preparing pages…';
+  const pages=[];
+  for(let n=1;n<=pdfDoc.numPages;n++){
+   const page=await pdfDoc.getPage(n),vp=page.getViewport({scale:1.15});
+   const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+   canvas.width=vp.width;canvas.height=vp.height;
+   await page.render({canvasContext:ctx,viewport:vp}).promise;
+   const wrap=document.createElement('div');wrap.className='page';wrap.appendChild(canvas);pages.push(wrap);
+  }
+  pages.forEach(p=>bookEl.appendChild(p));
+  const w=Math.min(440,window.innerWidth*.42),h=w*1.42;
+  flip=new St.PageFlip(bookEl,{width:w,height:h,size:'stretch',minWidth:260,maxWidth:600,minHeight:360,maxHeight:850,showCover:true,drawShadow:true,maxShadowOpacity:.35,flippingTime:750,usePortrait:true});
+  flip.loadFromHTML(pages);flip.on('flip',updateInfo);updateInfo();
+ }catch(e){
+  document.getElementById('loadTitle').textContent='Could not open the book';
+  document.getElementById('loadMessage').textContent='Refresh the page and try again. '+e.message;
+  console.error(e);
+ }
 }
 function updateInfo(){if(flip)info.textContent='Page '+(flip.getCurrentPageIndex()+1)+' / '+pdfDoc.numPages}
 document.getElementById('prev').onclick=()=>flip&&flip.flipPrev();
 document.getElementById('next').onclick=()=>flip&&flip.flipNext();
 document.getElementById('zoomIn').onclick=()=>{zoom=Math.min(1.5,zoom+.1);bookEl.style.transform='scale('+zoom+')'};
 document.getElementById('zoomOut').onclick=()=>{zoom=Math.max(.7,zoom-.1);bookEl.style.transform='scale('+zoom+')'};
-document.getElementById('close').onclick=()=>{if(flip)flip.destroy();flip=null;bookEl.innerHTML='';reader.style.display='none';drop.style.display='block';zoom=1;bookEl.style.transform=''};\nloadPDF();
+document.getElementById('close').onclick=()=>{if(flip)flip.destroy();flip=null;bookEl.innerHTML='';reader.style.display='none';drop.style.display='block';zoom=1;bookEl.style.transform=''};
+loadPDF();
 </script>
 </body></html>
