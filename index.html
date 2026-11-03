@@ -25,7 +25,7 @@ function showError(message){reader.hidden=true;loading.hidden=false;loading.text
 function saveProgress(){try{localStorage.setItem(PROGRESS_KEY,String(pageNum))}catch(e){}}
 async function drawPage(){
  if(!pdf)return;if(rendering){pending=true;return}rendering=true;pending=false;
- try{const page=await pdf.getPage(pageNum),base=page.getViewport({scale:1}),fit=Math.min(window.innerWidth/base.width,window.innerHeight/base.height),dpr=Math.min(window.devicePixelRatio||1,2),view=page.getViewport({scale:fit}),hi=page.getViewport({scale:fit*dpr);
+ try{const page=await pdf.getPage(pageNum),base=page.getViewport({scale:1}),fit=Math.min(window.innerWidth/base.width,window.innerHeight/base.height),dpr=Math.min(window.devicePixelRatio||1,2),view=page.getViewport({scale:fit}),hi=page.getViewport({scale:fit*dpr});
  canvas.width=Math.round(hi.width);canvas.height=Math.round(hi.height);canvas.style.width=Math.floor(view.width)+'px';canvas.style.height=Math.floor(view.height)+'px';
  await page.render({canvasContext:ctx,viewport:hi}).promise;counter.textContent=pageNum+' / '+pdf.numPages;pageInput.value=pageNum;
  }catch(e){showError(e.message)}finally{rendering=false;if(pending)drawPage()}
@@ -42,9 +42,7 @@ window.addEventListener('resize',()=>{if(pdf)drawPage()});
 (async()=>{try{
  if(!window.pdfjsLib)throw new Error('PDF viewer library did not load. Check your internet connection and refresh.');
  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
- const response=await fetch('./book.pdf');if(!response.ok)throw new Error('PDF download returned HTTP '+response.status);
- const bytes=await response.arrayBuffer();if(bytes.byteLength<1000)throw new Error('The PDF file appears empty.');
- pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+ pdf=await pdfjsLib.getDocument({url:'./book.pdf',disableAutoFetch:true,disableStream:true,rangeChunkSize:65536}).promise;
  try{const saved=Number(localStorage.getItem(PROGRESS_KEY));if(Number.isInteger(saved)&&saved>=1&&saved<=pdf.numPages)pageNum=saved}catch(e){}
  reader.hidden=false;loading.hidden=true;await drawPage();
  }catch(e){showError(e.message)}})();
