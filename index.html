@@ -4,33 +4,48 @@
 <meta name="theme-color" content="#111111"><title>The 48 Laws of Power — Reader</title>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;color:#eee;font-family:Arial,sans-serif;touch-action:pan-y}
-#reader{position:fixed;inset:0;width:100vw;height:100dvh;background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#reader{position:fixed;inset:0;width:100vw;height:100dvh;background:#111;align-items:center;justify-content:center;overflow:hidden}
+#reader[hidden],#loading[hidden]{display:none!important}#reader:not([hidden]){display:flex}
 #pageCanvas{display:block;max-width:100vw;max-height:100dvh;width:auto;height:auto;background:white;box-shadow:0 0 24px #0008}
-#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:14px;text-align:center;padding:24px}
-#counter{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#bbb;background:#111a;padding:5px 9px;border-radius:20px;opacity:.25;pointer-events:none}
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#ddd;font-size:14px;text-align:center;padding:28px;line-height:1.6}
+#counter{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#bbb;background:#111a;padding:5px 9px;border-radius:20px;opacity:.55;pointer-events:none}
 #jump{position:fixed;right:12px;bottom:18px;z-index:5;display:flex;gap:6px;align-items:center;background:#222d;padding:7px;border:1px solid #5558;border-radius:12px;backdrop-filter:blur(8px)}
-#jump input{display:block;width:62px;background:#111;color:#fff;border:1px solid #666;border-radius:7px;padding:7px;font-size:14px;text-align:center}
+#jump input{display:block;width:65px;background:#111;color:#fff;border:1px solid #666;border-radius:7px;padding:7px;font-size:14px;text-align:center}
 #jump button{background:#eee;color:#111;border:0;border-radius:7px;padding:8px 10px;font-weight:600}
-#jump button:active{opacity:.7}
 </style></head><body>
-<div id="loading">Opening your book…</div><div id="reader" hidden><canvas id="pageCanvas"></canvas></div><div id="counter"></div>
+<div id="loading">Opening your book…</div>
+<div id="reader" hidden><canvas id="pageCanvas"></canvas></div>
+<div id="counter"></div>
 <div id="jump"><input id="pageInput" type="number" min="1" placeholder="Page" inputmode="numeric" aria-label="Page number"><button id="goPage" type="button">Go</button></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script><script>
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const canvas=document.getElementById('pageCanvas'),ctx=canvas.getContext('2d'),loading=document.getElementById('loading'),reader=document.getElementById('reader'),counter=document.getElementById('counter');
-let pdf=null,pageNum=1,rendering=false,pending=false;
-const PROGRESS_KEY='mahe-48laws-last-page';
-async function drawPage(){if(!pdf||rendering){pending=true;return}rendering=true;pending=false;try{
-const page=await pdf.getPage(pageNum),base=page.getViewport({scale:1}),fit=Math.min(window.innerWidth/base.width,window.innerHeight/base.height),dpr=Math.min(window.devicePixelRatio||1,2.5),view=page.getViewport({scale:fit}),hi=page.getViewport({scale:fit*dpr});
-canvas.width=Math.round(hi.width);canvas.height=Math.round(hi.height);canvas.style.width=Math.floor(view.width)+'px';canvas.style.height=Math.floor(view.height)+'px';
-await page.render({canvasContext:ctx,viewport:hi}).promise;counter.textContent=pageNum+' / '+pdf.numPages;document.getElementById('pageInput').value=pageNum;
-}catch(e){loading.hidden=false;loading.textContent='Could not render page: '+e.message}rendering=false;if(pending)drawPage()}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const loading=document.getElementById('loading'),reader=document.getElementById('reader'),canvas=document.getElementById('pageCanvas'),ctx=canvas.getContext('2d'),counter=document.getElementById('counter'),pageInput=document.getElementById('pageInput');
+const PROGRESS_KEY='mahe-48laws-last-page';let pdf=null,pageNum=1,rendering=false,pending=false;
+function showError(message){reader.hidden=true;loading.hidden=false;loading.textContent='Book could not load: '+message+' — refresh the page to try again.'}
 function saveProgress(){try{localStorage.setItem(PROGRESS_KEY,String(pageNum))}catch(e){}}
-function next(){if(pdf&&pageNum<pdf.numPages){pageNum++;saveProgress();drawPage()}}function prev(){if(pdf&&pageNum>1){pageNum--;saveProgress();drawPage()}}
+async function drawPage(){
+ if(!pdf)return;if(rendering){pending=true;return}rendering=true;pending=false;
+ try{const page=await pdf.getPage(pageNum),base=page.getViewport({scale:1}),fit=Math.min(window.innerWidth/base.width,window.innerHeight/base.height),dpr=Math.min(window.devicePixelRatio||1,2),view=page.getViewport({scale:fit}),hi=page.getViewport({scale:fit*dpr);
+ canvas.width=Math.round(hi.width);canvas.height=Math.round(hi.height);canvas.style.width=Math.floor(view.width)+'px';canvas.style.height=Math.floor(view.height)+'px';
+ await page.render({canvasContext:ctx,viewport:hi}).promise;counter.textContent=pageNum+' / '+pdf.numPages;pageInput.value=pageNum;
+ }catch(e){showError(e.message)}finally{rendering=false;if(pending)drawPage()}
+}
+function next(){if(pdf&&pageNum<pdf.numPages){pageNum++;saveProgress();drawPage()}}
+function prev(){if(pdf&&pageNum>1){pageNum--;saveProgress();drawPage()}}
+function jumpToPage(){if(!pdf)return;const n=Number(pageInput.value);if(!Number.isInteger(n)||n<1||n>pdf.numPages){pageInput.setCustomValidity('Enter a page from 1 to '+pdf.numPages);pageInput.reportValidity();return}pageInput.setCustomValidity('');pageNum=n;saveProgress();drawPage()}
+document.getElementById('goPage').addEventListener('click',jumpToPage);pageInput.addEventListener('keydown',e=>{if(e.key==='Enter')jumpToPage()});
 let sx=0,sy=0;reader.addEventListener('touchstart',e=>{sx=e.changedTouches[0].clientX;sy=e.changedTouches[0].clientY},{passive:true});
 reader.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.2){dx<0?next():prev()}},{passive:true});
-reader.addEventListener('click',e=>{const x=e.clientX/window.innerWidth;if(x>.72)next();else if(x<.28)prev()});
+reader.addEventListener('click',e=>{const x=e.clientX/window.innerWidth;if(x>.78)next();else if(x<.22)prev()});
 window.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next()}if(e.key==='ArrowLeft'){e.preventDefault();prev()}});
-window.addEventListener('resize',()=>drawPage());
-(async()=>{try{const r=await fetch('./book.pdf');if(!r.ok)throw new Error('PDF request failed ('+r.status+')');pdf=await pdfjsLib.getDocument({data:await r.arrayBuffer()}).promise;try{const saved=Number(localStorage.getItem(PROGRESS_KEY));if(Number.isInteger(saved)&&saved>=1&&saved<=pdf.numPages)pageNum=saved}catch(e){}document.getElementById('pageInput').value=pageNum;loading.hidden=true;reader.hidden=false;await drawPage()}catch(e){loading.textContent='Could not open book: '+e.message}})();
+window.addEventListener('resize',()=>{if(pdf)drawPage()});
+(async()=>{try{
+ if(!window.pdfjsLib)throw new Error('PDF viewer library did not load. Check your internet connection and refresh.');
+ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+ const response=await fetch('./book.pdf');if(!response.ok)throw new Error('PDF download returned HTTP '+response.status);
+ const bytes=await response.arrayBuffer();if(bytes.byteLength<1000)throw new Error('The PDF file appears empty.');
+ pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+ try{const saved=Number(localStorage.getItem(PROGRESS_KEY));if(Number.isInteger(saved)&&saved>=1&&saved<=pdf.numPages)pageNum=saved}catch(e){}
+ reader.hidden=false;loading.hidden=true;await drawPage();
+ }catch(e){showError(e.message)}})();
 </script></body></html>
