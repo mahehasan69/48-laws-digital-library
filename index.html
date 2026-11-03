@@ -13,11 +13,11 @@ main{width:100%;height:100dvh;margin:0;padding:0;max-width:none}
 .shelf{width:100%;height:100%;margin:0;padding:0;border:0;border-radius:0;background:#171717;box-shadow:none}
 .upload{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#171717;border:0;border-radius:0;padding:24px;text-align:center}
 .upload h2{font-size:18px}.upload p{color:#aaa}
-#reader{display:none;width:100%;height:100%;margin:0}
-.toolbar{position:fixed;z-index:10;top:env(safe-area-inset-top,0);left:0;right:0;height:48px;display:flex;align-items:center;justify-content:center;gap:7px;margin:0;padding:5px;background:#171717dd;backdrop-filter:blur(8px)}
+#reader{display:none;position:fixed;inset:0;width:100vw;height:100dvh;margin:0;z-index:20;background:#111}
+.toolbar{display:none!important}
 .toolbar button{background:#303030;color:#fff;border:1px solid #555;border-radius:7px;padding:7px 10px;font-size:12px}
 #pageInfo{font-size:11px;color:#ddd;min-width:72px;text-align:center}
-.stage{width:100%;height:100dvh;min-height:0;display:flex;align-items:center;justify-content:center;padding:52px 0 8px;background:#171717;overflow:hidden}
+.stage{position:absolute;inset:0;width:100vw;height:100dvh;min-height:0;display:flex;align-items:center;justify-content:center;padding:0;margin:0;background:#111;overflow:hidden}
 #book{margin:0 auto}
 #book .page{background:#fff;color:#222;overflow:hidden}
 #book canvas{display:block;width:100%;height:100%}
@@ -64,8 +64,8 @@ async function loadPDF(){
    const wrap=document.createElement('div');wrap.className='page';wrap.appendChild(canvas);pages.push(wrap);
   }
   pages.forEach(p=>bookEl.appendChild(p));
-  const ratio=0.707;const w=Math.max(250,Math.min(620,window.innerWidth*.94,(window.innerHeight-80)*ratio));const h=w/ratio;
-  flip=new St.PageFlip(bookEl,{width:w,height:h,size:'fixed',minWidth:250,maxWidth:620,minHeight:350,maxHeight:880,showCover:true,drawShadow:true,maxShadowOpacity:.35,flippingTime:750,usePortrait:true});
+  const w=window.innerWidth;const h=window.innerHeight;
+  flip=new St.PageFlip(bookEl,{width:w,height:h,size:'stretch',minWidth:240,maxWidth:1400,minHeight:320,maxHeight:1800,showCover:true,drawShadow:true,maxShadowOpacity:.35,flippingTime:750,usePortrait:true});
   flip.loadFromHTML(pages);flip.on('flip',updateInfo);updateInfo();
  }catch(e){
   document.getElementById('loadTitle').textContent='Could not open the book';
