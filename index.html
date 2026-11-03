@@ -19,13 +19,14 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const canvas=document.getElementById('pageCanvas'),ctx=canvas.getContext('2d'),loading=document.getElementById('loading'),reader=document.getElementById('reader'),counter=document.getElementById('counter');
 let pdf=null,pageNum=1,rendering=false,pending=false;
-const PROGRESS_KEY='mahe-48laws-last-page';\nconst PROGRESS_KEY='mahe-48laws-last-page';
+const PROGRESS_KEY='mahe-48laws-last-page';
 async function drawPage(){if(!pdf||rendering){pending=true;return}rendering=true;pending=false;try{
 const page=await pdf.getPage(pageNum),base=page.getViewport({scale:1}),fit=Math.min(window.innerWidth/base.width,window.innerHeight/base.height),dpr=Math.min(window.devicePixelRatio||1,2.5),view=page.getViewport({scale:fit}),hi=page.getViewport({scale:fit*dpr});
 canvas.width=Math.round(hi.width);canvas.height=Math.round(hi.height);canvas.style.width=Math.floor(view.width)+'px';canvas.style.height=Math.floor(view.height)+'px';
 await page.render({canvasContext:ctx,viewport:hi}).promise;counter.textContent=pageNum+' / '+pdf.numPages;document.getElementById('pageInput').value=pageNum;
 }catch(e){loading.hidden=false;loading.textContent='Could not render page: '+e.message}rendering=false;if(pending)drawPage()}
-function saveProgress(){try{localStorage.setItem(PROGRESS_KEY,String(pageNum))}catch(e){}}\nfunction next(){if(pdf&&pageNum<pdf.numPages){pageNum++;saveProgress();drawPage()}}function prev(){if(pdf&&pageNum>1){pageNum--;saveProgress();drawPage()}}
+function saveProgress(){try{localStorage.setItem(PROGRESS_KEY,String(pageNum))}catch(e){}}
+function next(){if(pdf&&pageNum<pdf.numPages){pageNum++;saveProgress();drawPage()}}function prev(){if(pdf&&pageNum>1){pageNum--;saveProgress();drawPage()}}
 let sx=0,sy=0;reader.addEventListener('touchstart',e=>{sx=e.changedTouches[0].clientX;sy=e.changedTouches[0].clientY},{passive:true});
 reader.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.2){dx<0?next():prev()}},{passive:true});
 reader.addEventListener('click',e=>{const x=e.clientX/window.innerWidth;if(x>.72)next();else if(x<.28)prev()});
