@@ -1,84 +1,29 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Digital Library — Book Reader</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#111111"><title>The 48 Laws of Power — Reader</title>
 <style>
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#171717;color:#eee;font-family:Arial,sans-serif}
-header,.intro,footer{display:none!important}
-main{width:100%;height:100dvh;margin:0;padding:0;max-width:none}
-.shelf{width:100%;height:100%;margin:0;padding:0;border:0;border-radius:0;background:#171717;box-shadow:none}
-.upload{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#171717;border:0;border-radius:0;padding:24px;text-align:center}
-.upload h2{font-size:18px}.upload p{color:#aaa}
-#reader{display:none;position:fixed;inset:0;width:100vw;height:100dvh;margin:0;z-index:20;background:#111}
-.toolbar{display:none!important}
-.toolbar button{background:#303030;color:#fff;border:1px solid #555;border-radius:7px;padding:7px 10px;font-size:12px}
-#pageInfo{font-size:11px;color:#ddd;min-width:72px;text-align:center}
-.stage{position:absolute;inset:0;width:100vw;height:100dvh;min-height:0;display:flex;align-items:center;justify-content:center;padding:0;margin:0;background:#111;overflow:hidden}
-#book{margin:0 auto}
-#book .page{background:#fff;color:#222;overflow:hidden}
-#book canvas{display:block;width:100%;height:100%}
-input{display:none}
-</style>
-</head>
-<body>
-<header><div class="brand">MAHE<span> / </span> DIGITAL LIBRARY</div><div class="status">PERSONAL BOOK READER</div></header>
-<main>
-<section class="intro"><div class="eyebrow">A quieter way to read</div><h1>Your digital bookshelf.</h1><p><em>The 48 Laws of Power</em> — ready on your bookshelf. Open the book and turn the pages.</p></section>
-<section class="shelf">
-<div class="upload" id="drop">
-<div style="font-size:34px">▤</div><h2 id="loadTitle">Opening your book…</h2>
-<p id="loadMessage">Loading <em>The 48 Laws of Power</em> from this library.</p>
-<div class="hint">Your book is ready to read.</div>
-</div>
-<div id="reader">
-<div class="toolbar"><button id="prev">← Previous</button><span id="pageInfo">Page 0 / 0</span><button id="next">Next →</button><button id="zoomOut">−</button><button id="zoomIn">＋</button><button id="close">Close book</button></div>
-<div class="stage"><div id="book"></div></div>
-</div>
-</section>
-</main>
-<footer>Mahe Digital Library · The 48 Laws of Power</footer>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
-<script>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;color:#eee;font-family:Arial,sans-serif;touch-action:pan-y}
+#reader{position:fixed;inset:0;width:100vw;height:100dvh;background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#pageCanvas{display:block;max-width:100vw;max-height:100dvh;width:auto;height:auto;background:white;box-shadow:0 0 24px #0008}
+#loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:14px;text-align:center;padding:24px}
+#counter{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#bbb;background:#111a;padding:5px 9px;border-radius:20px;opacity:.25;pointer-events:none}
+</style></head><body>
+<div id="loading">Opening your book…</div><div id="reader" hidden><canvas id="pageCanvas"></canvas></div><div id="counter"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script><script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const reader=document.getElementById('reader'),drop=document.getElementById('drop'),bookEl=document.getElementById('book'),info=document.getElementById('pageInfo');
-let flip=null,zoom=1,pdfDoc=null;
-async function loadPDF(){
- try{
-  document.getElementById('loadTitle').textContent='Opening your book…';
-  const response=await fetch('./book.pdf');
-  if(!response.ok) throw new Error('PDF request failed: '+response.status);
-  const bytes=await response.arrayBuffer();
-  pdfDoc=await pdfjsLib.getDocument({data:bytes}).promise;
-  drop.style.display='none';reader.style.display='block';info.textContent='Preparing pages…';
-  const pages=[];
-  for(let n=1;n<=pdfDoc.numPages;n++){
-   const page=await pdfDoc.getPage(n),vp=page.getViewport({scale:1.15});
-   const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
-   canvas.width=vp.width;canvas.height=vp.height;
-   await page.render({canvasContext:ctx,viewport:vp}).promise;
-   const wrap=document.createElement('div');wrap.className='page';wrap.appendChild(canvas);pages.push(wrap);
-  }
-  pages.forEach(p=>bookEl.appendChild(p));
-  const w=window.innerWidth;const h=window.innerHeight;
-  flip=new St.PageFlip(bookEl,{width:w,height:h,size:'stretch',minWidth:240,maxWidth:1400,minHeight:320,maxHeight:1800,showCover:true,drawShadow:true,maxShadowOpacity:.35,flippingTime:750,usePortrait:true});
-  flip.loadFromHTML(pages);flip.on('flip',updateInfo);updateInfo();
- }catch(e){
-  document.getElementById('loadTitle').textContent='Could not open the book';
-  document.getElementById('loadMessage').textContent='Refresh the page and try again. '+e.message;
-  console.error(e);
- }
-}
-function updateInfo(){if(flip)info.textContent='Page '+(flip.getCurrentPageIndex()+1)+' / '+pdfDoc.numPages}
-document.getElementById('prev').onclick=()=>flip&&flip.flipPrev();
-document.getElementById('next').onclick=()=>flip&&flip.flipNext();
-document.getElementById('zoomIn').onclick=()=>{zoom=Math.min(1.5,zoom+.1);bookEl.style.transform='scale('+zoom+')'};
-document.getElementById('zoomOut').onclick=()=>{zoom=Math.max(.7,zoom-.1);bookEl.style.transform='scale('+zoom+')'};
-document.getElementById('close').onclick=()=>{if(flip)flip.destroy();flip=null;bookEl.innerHTML='';reader.style.display='none';drop.style.display='block';zoom=1;bookEl.style.transform=''};
-loadPDF();
-</script>
-</body></html>
+const canvas=document.getElementById('pageCanvas'),ctx=canvas.getContext('2d'),loading=document.getElementById('loading'),reader=document.getElementById('reader'),counter=document.getElementById('counter');
+let pdf=null,pageNum=1,rendering=false,pending=false;
+async function drawPage(){if(!pdf||rendering){pending=true;return}rendering=true;pending=false;try{
+const page=await pdf.getPage(pageNum),base=page.getViewport({scale:1}),fit=Math.min(window.innerWidth/base.width,window.innerHeight/base.height),dpr=Math.min(window.devicePixelRatio||1,2.5),view=page.getViewport({scale:fit}),hi=page.getViewport({scale:fit*dpr});
+canvas.width=Math.round(hi.width);canvas.height=Math.round(hi.height);canvas.style.width=Math.floor(view.width)+'px';canvas.style.height=Math.floor(view.height)+'px';
+await page.render({canvasContext:ctx,viewport:hi}).promise;counter.textContent=pageNum+' / '+pdf.numPages;
+}catch(e){loading.hidden=false;loading.textContent='Could not render page: '+e.message}rendering=false;if(pending)drawPage()}
+function next(){if(pdf&&pageNum<pdf.numPages){pageNum++;drawPage()}}function prev(){if(pdf&&pageNum>1){pageNum--;drawPage()}}
+let sx=0,sy=0;reader.addEventListener('touchstart',e=>{sx=e.changedTouches[0].clientX;sy=e.changedTouches[0].clientY},{passive:true});
+reader.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.2){dx<0?next():prev()}},{passive:true});
+reader.addEventListener('click',e=>{const x=e.clientX/window.innerWidth;if(x>.72)next();else if(x<.28)prev()});
+window.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next()}if(e.key==='ArrowLeft'){e.preventDefault();prev()}});
+window.addEventListener('resize',()=>drawPage());
+(async()=>{try{const r=await fetch('./book.pdf');if(!r.ok)throw new Error('PDF request failed ('+r.status+')');pdf=await pdfjsLib.getDocument({data:await r.arrayBuffer()}).promise;loading.hidden=true;reader.hidden=false;await drawPage()}catch(e){loading.textContent='Could not open book: '+e.message}})();
+</script></body></html>
