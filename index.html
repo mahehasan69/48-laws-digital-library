@@ -21,7 +21,7 @@ footer{text-align:center;color:#777d87;font-size:11px;padding:30px 15px}input{di
 <body>
 <header><div class="brand">MAHE<span> / </span> DIGITAL LIBRARY</div><div class="status">PERSONAL BOOK READER</div></header>
 <main>
-<section class="intro"><div class="eyebrow">A quieter way to read</div><h1>Your digital bookshelf.</h1><p>Open a PDF from your device and enjoy a clean, page-turning reading experience. Your file stays on your device; it is not uploaded to this website.</p></section>
+<section class="intro"><div class="eyebrow">A quieter way to read</div><h1>Your digital bookshelf.</h1><p><em>The 48 Laws of Power</em> — ready on your bookshelf. Open the book and turn the pages.</p></section>
 <section class="shelf">
 <div class="upload" id="drop">
 <div style="font-size:34px">▤</div><h2>Bring a book to life</h2><p>Choose a PDF from your phone or computer to open it in the reader.</p>
@@ -34,12 +34,12 @@ footer{text-align:center;color:#777d87;font-size:11px;padding:30px 15px}input{di
 </div>
 </section>
 </main>
-<footer>Personal reading interface · Your selected PDF is never sent to this site.</footer>
+<footer>Mahe Digital Library · The 48 Laws of Power</footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.min.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-const fileInput=document.getElementById('file'),reader=document.getElementById('reader'),drop=document.getElementById('drop'),bookEl=document.getElementById('book'),info=document.getElementById('pageInfo');
+const reader=document.getElementById('reader'),drop=document.getElementById('drop'),bookEl=document.getElementById('book'),info=document.getElementById('pageInfo');
 let flip=null,zoom=1,pdfDoc=null;
 document.getElementById('choose').onclick=()=>fileInput.click();
 document.getElementById('drop').addEventListener('dragover',e=>{e.preventDefault();drop.style.borderColor='#d7b879'});
@@ -48,7 +48,7 @@ fileInput.onchange=()=>{if(fileInput.files[0])loadPDF(fileInput.files[0])};
 async function loadPDF(file){
 try{
 if(flip){flip.destroy();flip=null}bookEl.innerHTML='';drop.style.display='none';reader.style.display='block';info.textContent='Preparing pages…';
-pdfDoc=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
+const response=await fetch('./book.pdf');if(!response.ok)throw new Error('Could not fetch book.pdf: '+response.status);\npdfDoc=await pdfjsLib.getDocument({data:await response.arrayBuffer()}).promise;
 const pages=[];
 for(let n=1;n<=pdfDoc.numPages;n++){
 const page=await pdfDoc.getPage(n),vp=page.getViewport({scale:1.35});
@@ -60,13 +60,13 @@ pages.forEach(p=>bookEl.appendChild(p));
 const w=Math.min(440,window.innerWidth*.42),h=w*1.42;
 flip=new St.PageFlip(bookEl,{width:w,height:h,size:'stretch',minWidth:260,maxWidth:600,minHeight:360,maxHeight:850,showCover:true,drawShadow:true,maxShadowOpacity:.35,flippingTime:750,usePortrait:true});
 flip.loadFromHTML(pages);flip.on('flip',updateInfo);updateInfo();
-}catch(e){alert('Could not open this PDF. Please try another file.');reader.style.display='none';drop.style.display='block';console.error(e)}
+}catch(e){document.getElementById('loadTitle').textContent='Book could not be loaded';document.getElementById('loadMessage').textContent='Please check that book.pdf exists in the repository and try refreshing.';console.error(e)}
 }
 function updateInfo(){if(flip)info.textContent='Page '+(flip.getCurrentPageIndex()+1)+' / '+pdfDoc.numPages}
 document.getElementById('prev').onclick=()=>flip&&flip.flipPrev();
 document.getElementById('next').onclick=()=>flip&&flip.flipNext();
 document.getElementById('zoomIn').onclick=()=>{zoom=Math.min(1.5,zoom+.1);bookEl.style.transform='scale('+zoom+')'};
 document.getElementById('zoomOut').onclick=()=>{zoom=Math.max(.7,zoom-.1);bookEl.style.transform='scale('+zoom+')'};
-document.getElementById('close').onclick=()=>{if(flip)flip.destroy();flip=null;bookEl.innerHTML='';reader.style.display='none';drop.style.display='block';fileInput.value='';zoom=1;bookEl.style.transform=''};
+document.getElementById('close').onclick=()=>{if(flip)flip.destroy();flip=null;bookEl.innerHTML='';reader.style.display='none';drop.style.display='block';zoom=1;bookEl.style.transform=''};\nloadPDF();
 </script>
 </body></html>
