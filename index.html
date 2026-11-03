@@ -8,16 +8,22 @@
 #pageCanvas{display:block;max-width:100vw;max-height:100dvh;width:auto;height:auto;background:white;box-shadow:0 0 24px #0008}
 #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:14px;text-align:center;padding:24px}
 #counter{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#bbb;background:#111a;padding:5px 9px;border-radius:20px;opacity:.25;pointer-events:none}
+#jump{position:fixed;right:12px;bottom:18px;z-index:5;display:flex;gap:6px;align-items:center;background:#222d;padding:7px;border:1px solid #5558;border-radius:12px;backdrop-filter:blur(8px)}
+#jump input{display:block;width:62px;background:#111;color:#fff;border:1px solid #666;border-radius:7px;padding:7px;font-size:14px;text-align:center}
+#jump button{background:#eee;color:#111;border:0;border-radius:7px;padding:8px 10px;font-weight:600}
+#jump button:active{opacity:.7}
 </style></head><body>
 <div id="loading">Opening your book…</div><div id="reader" hidden><canvas id="pageCanvas"></canvas></div><div id="counter"></div>
+<div id="jump"><input id="pageInput" type="number" min="1" placeholder="Page" inputmode="numeric" aria-label="Page number"><button id="goPage" type="button">Go</button></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script><script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const canvas=document.getElementById('pageCanvas'),ctx=canvas.getContext('2d'),loading=document.getElementById('loading'),reader=document.getElementById('reader'),counter=document.getElementById('counter');
-let pdf=null,pageNum=1,rendering=false,pending=false;\nconst PROGRESS_KEY='mahe-48laws-last-page';
+let pdf=null,pageNum=1,rendering=false,pending=false;
+const PROGRESS_KEY='mahe-48laws-last-page';\nconst PROGRESS_KEY='mahe-48laws-last-page';
 async function drawPage(){if(!pdf||rendering){pending=true;return}rendering=true;pending=false;try{
 const page=await pdf.getPage(pageNum),base=page.getViewport({scale:1}),fit=Math.min(window.innerWidth/base.width,window.innerHeight/base.height),dpr=Math.min(window.devicePixelRatio||1,2.5),view=page.getViewport({scale:fit}),hi=page.getViewport({scale:fit*dpr});
 canvas.width=Math.round(hi.width);canvas.height=Math.round(hi.height);canvas.style.width=Math.floor(view.width)+'px';canvas.style.height=Math.floor(view.height)+'px';
-await page.render({canvasContext:ctx,viewport:hi}).promise;counter.textContent=pageNum+' / '+pdf.numPages;
+await page.render({canvasContext:ctx,viewport:hi}).promise;counter.textContent=pageNum+' / '+pdf.numPages;document.getElementById('pageInput').value=pageNum;
 }catch(e){loading.hidden=false;loading.textContent='Could not render page: '+e.message}rendering=false;if(pending)drawPage()}
 function saveProgress(){try{localStorage.setItem(PROGRESS_KEY,String(pageNum))}catch(e){}}\nfunction next(){if(pdf&&pageNum<pdf.numPages){pageNum++;saveProgress();drawPage()}}function prev(){if(pdf&&pageNum>1){pageNum--;saveProgress();drawPage()}}
 let sx=0,sy=0;reader.addEventListener('touchstart',e=>{sx=e.changedTouches[0].clientX;sy=e.changedTouches[0].clientY},{passive:true});
@@ -25,5 +31,5 @@ reader.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,d
 reader.addEventListener('click',e=>{const x=e.clientX/window.innerWidth;if(x>.72)next();else if(x<.28)prev()});
 window.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next()}if(e.key==='ArrowLeft'){e.preventDefault();prev()}});
 window.addEventListener('resize',()=>drawPage());
-(async()=>{try{const r=await fetch('./book.pdf');if(!r.ok)throw new Error('PDF request failed ('+r.status+')');pdf=await pdfjsLib.getDocument({data:await r.arrayBuffer()}).promise;try{const saved=Number(localStorage.getItem(PROGRESS_KEY));if(Number.isInteger(saved)&&saved>=1&&saved<=pdf.numPages)pageNum=saved}catch(e){}loading.hidden=true;reader.hidden=false;await drawPage()}catch(e){loading.textContent='Could not open book: '+e.message}})();
+(async()=>{try{const r=await fetch('./book.pdf');if(!r.ok)throw new Error('PDF request failed ('+r.status+')');pdf=await pdfjsLib.getDocument({data:await r.arrayBuffer()}).promise;try{const saved=Number(localStorage.getItem(PROGRESS_KEY));if(Number.isInteger(saved)&&saved>=1&&saved<=pdf.numPages)pageNum=saved}catch(e){}document.getElementById('pageInput').value=pageNum;loading.hidden=true;reader.hidden=false;await drawPage()}catch(e){loading.textContent='Could not open book: '+e.message}})();
 </script></body></html>
